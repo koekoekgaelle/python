@@ -5,8 +5,7 @@ from assistant.prompts import SYSTEM_PROMPT
 
 def create_chatbot():
     return ChatOpenAI(
-        model="gpt-5.6",
-        temperature=0.7,
+        model="gpt-4o-mini",
     )
 
 

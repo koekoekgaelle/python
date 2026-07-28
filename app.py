@@ -5,14 +5,19 @@ from dotenv import load_dotenv
 from langchain_core.messages import AIMessage, HumanMessage
 
 from assistant.chatbot import create_chatbot, create_new_conversation
+from assistant.document_loader import load_pdf
+from assistant.chunker import create_chunks
+from assistant.vectordb import create_vectorstore
 
+# =========================
+# Configuratie
+# =========================
 
 load_dotenv()
 
 if not os.getenv("OPENAI_API_KEY"):
     st.error("OPENAI_API_KEY ontbreekt in het .env-bestand.")
     st.stop()
-
 
 st.set_page_config(
     page_title="Mijn AI-assistent",
@@ -21,13 +26,61 @@ st.set_page_config(
 
 st.title("🤖 Mijn AI-assistent")
 
+# =========================
+# Sidebar
+# =========================
+
+with st.sidebar:
+    st.header("🤖 Mijn AI-assistent")
+
+    if st.button("🗑️ Nieuw gesprek"):
+        st.session_state.gesprek = create_new_conversation()
+        st.rerun()
+
+    st.divider()
+
+    uploaded_file = st.file_uploader(
+        "📄 Upload een PDF",
+        type=["pdf"]
+    )
+
+    st.divider()
+
+    if "gesprek" in st.session_state:
+        aantal = len(st.session_state.gesprek) - 1
+    else:
+        aantal = 0
+
+    st.write(f"💬 Berichten: {max(aantal, 0)}")
+
+# =========================
+# PDF verwerken
+# =========================
+
+if uploaded_file is not None:
+   text = load_pdf(uploaded_file)
+   chunks = create_chunks(text)
+
+   vectorstore = create_vectorstore(chunks)
+
+   st.success(f"✅ {uploaded_file.name} geladen!")
+
+   st.info(f"📦 {len(chunks)} chunks gemaakt.")
+
+   st.success("🗄️ Vector database aangemaakt!")
+
+# =========================
+# Chat initialiseren
+# =========================
 
 if "gesprek" not in st.session_state:
     st.session_state.gesprek = create_new_conversation()
 
-
 chatbot = create_chatbot()
 
+# =========================
+# Chatgeschiedenis tonen
+# =========================
 
 for bericht in st.session_state.gesprek:
     if isinstance(bericht, HumanMessage):
@@ -38,6 +91,9 @@ for bericht in st.session_state.gesprek:
         with st.chat_message("assistant"):
             st.write(bericht.content)
 
+# =========================
+# Nieuw bericht
+# =========================
 
 vraag = st.chat_input("Typ hier je vraag")
 
