@@ -9,7 +9,7 @@ from langchain_core.messages import AIMessage, HumanMessage
 
 from assistant.chatbot import create_chatbot, create_new_conversation
 from assistant.chat_service import stream_answer
-from assistant.document_service import process_pdf
+from assistant.embedding.document_service import process_pdf
 from assistant.rag import build_rag_messages
 
 # =========================

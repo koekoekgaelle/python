@@ -1,7 +1,7 @@
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
 
-from assistant.embeddings import create_embeddings
+from assistant.embedding.embeddings import create_embeddings
 
 
 def create_vectorstore(chunks: list[Document]):
