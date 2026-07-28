@@ -8,6 +8,7 @@ from assistant.chatbot import create_chatbot, create_new_conversation
 from assistant.document_loader import load_pdf
 from assistant.chunker import create_chunks
 from assistant.vectordb import create_vectorstore
+from assistant.retriever import search_documents
 
 # =========================
 # Configuratie
@@ -58,17 +59,29 @@ with st.sidebar:
 # =========================
 
 if uploaded_file is not None:
-   text = load_pdf(uploaded_file)
-   chunks = create_chunks(text)
+    document_id = f"{uploaded_file.name}-{uploaded_file.size}"
 
-   vectorstore = create_vectorstore(chunks)
+    # Alleen verwerken wanneer er een nieuw bestand is geüpload
+    if st.session_state.get("document_id") != document_id:
+        text = load_pdf(uploaded_file)
+        chunks = create_chunks(text)
 
-   st.success(f"✅ {uploaded_file.name} geladen!")
+        vectorstore = create_vectorstore(chunks)
 
-   st.info(f"📦 {len(chunks)} chunks gemaakt.")
+        st.session_state.vectorstore = vectorstore
+        st.session_state.document_id = document_id
+        st.session_state.document_name = uploaded_file.name
+        st.session_state.aantal_chunks = len(chunks)
 
-   st.success("🗄️ Vector database aangemaakt!")
+    st.success(
+        f"✅ {st.session_state.document_name} geladen!"
+    )
 
+    st.info(
+        f"📦 {st.session_state.aantal_chunks} chunks beschikbaar."
+    )
+
+    st.success("🗄️ Vector database gereed!")
 # =========================
 # Chat initialiseren
 # =========================
@@ -106,16 +119,73 @@ if vraag:
         st.write(vraag)
 
     try:
+        # =========================
+        # Bepalen welke berichten GPT krijgt
+        # =========================
+
+        if "vectorstore" in st.session_state:
+            # PDF is aanwezig: gebruik retrieval
+            results = search_documents(
+                st.session_state.vectorstore,
+                vraag,
+                k=3,
+            )
+
+            context = "\n\n---\n\n".join(
+                doc.page_content for doc in results
+            )
+
+            rag_vraag = HumanMessage(
+                content=f"""
+Gebruik de onderstaande documentcontext om de vraag te beantwoorden.
+
+Als het antwoord niet in de context staat, zeg dan eerlijk dat je
+het niet in het geüploade document kunt vinden.
+
+CONTEXT:
+{context}
+
+VRAAG:
+{vraag}
+"""
+            )
+
+            berichten_voor_model = (
+                st.session_state.gesprek[:-1]
+                + [rag_vraag]
+            )
+
+        else:
+            # Geen PDF aanwezig: gewone chatbot
+            results = []
+            berichten_voor_model = st.session_state.gesprek
+
+        # =========================
+        # Antwoord genereren
+        # =========================
+
         with st.chat_message("assistant"):
             volledig_antwoord = ""
             placeholder = st.empty()
 
-            for stukje in chatbot.stream(st.session_state.gesprek):
+            for stukje in chatbot.stream(berichten_voor_model):
                 if stukje.content:
                     volledig_antwoord += stukje.content
-                    placeholder.markdown(volledig_antwoord + "▌")
+                    placeholder.markdown(
+                        volledig_antwoord + "▌"
+                    )
 
             placeholder.markdown(volledig_antwoord)
+
+            # Alleen tonen wanneer retrieval is gebruikt
+            if results:
+                with st.expander(
+                    "🔍 Bekijk gebruikte PDF-fragmenten"
+                ):
+                    for i, doc in enumerate(results, start=1):
+                        st.markdown(f"**Fragment {i}**")
+                        st.write(doc.page_content)
+                        st.divider()
 
         st.session_state.gesprek.append(
             AIMessage(content=volledig_antwoord)
