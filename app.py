@@ -56,14 +56,21 @@ if vraag:
         st.write(vraag)
 
     try:
-        antwoord = chatbot.invoke(st.session_state.gesprek)
+        with st.chat_message("assistant"):
+            volledig_antwoord = ""
+
+            placeholder = st.empty()
+
+            for stukje in chatbot.stream(st.session_state.gesprek):
+                if stukje.content:
+                    volledig_antwoord += stukje.content
+                    placeholder.markdown(volledig_antwoord + "▌")
+
+            placeholder.markdown(volledig_antwoord)
 
         st.session_state.gesprek.append(
-            AIMessage(content=antwoord.content)
+            AIMessage(content=volledig_antwoord)
         )
-
-        with st.chat_message("assistant"):
-            st.write(antwoord.content)
 
     except Exception as fout:
         st.error(f"Er ging iets mis: {fout}")
