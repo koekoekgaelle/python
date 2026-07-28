@@ -5,10 +5,9 @@ from dotenv import load_dotenv
 from langchain_core.messages import AIMessage, HumanMessage
 
 from assistant.chatbot import create_chatbot, create_new_conversation
-from assistant.document_loader import load_pdf
-from assistant.chunker import create_chunks
-from assistant.vectordb import create_vectorstore
-from assistant.retriever import search_documents
+from assistant.document_service import process_pdf
+from assistant.rag import build_rag_messages
+from assistant.chat_service import stream_answer
 
 # =========================
 # Configuratie
@@ -42,7 +41,7 @@ with st.sidebar:
 
     uploaded_file = st.file_uploader(
         "📄 Upload een PDF",
-        type=["pdf"]
+        type=["pdf"],
     )
 
     st.divider()
@@ -61,17 +60,13 @@ with st.sidebar:
 if uploaded_file is not None:
     document_id = f"{uploaded_file.name}-{uploaded_file.size}"
 
-    # Alleen verwerken wanneer er een nieuw bestand is geüpload
     if st.session_state.get("document_id") != document_id:
-        text = load_pdf(uploaded_file)
-        chunks = create_chunks(text)
+        document_data = process_pdf(uploaded_file)
 
-        vectorstore = create_vectorstore(chunks)
-
-        st.session_state.vectorstore = vectorstore
-        st.session_state.document_id = document_id
-        st.session_state.document_name = uploaded_file.name
-        st.session_state.aantal_chunks = len(chunks)
+        st.session_state.vectorstore = document_data["vectorstore"]
+        st.session_state.document_id = document_data["document_id"]
+        st.session_state.document_name = document_data["document_name"]
+        st.session_state.aantal_chunks = document_data["chunk_count"]
 
     st.success(
         f"✅ {st.session_state.document_name} geladen!"
@@ -82,6 +77,7 @@ if uploaded_file is not None:
     )
 
     st.success("🗄️ Vector database gereed!")
+
 # =========================
 # Chat initialiseren
 # =========================
@@ -124,39 +120,13 @@ if vraag:
         # =========================
 
         if "vectorstore" in st.session_state:
-            # PDF is aanwezig: gebruik retrieval
-            results = search_documents(
-                st.session_state.vectorstore,
+            berichten_voor_model, results = build_rag_messages(
+                st.session_state.gesprek,
                 vraag,
-                k=3,
-            )
-
-            context = "\n\n---\n\n".join(
-                doc.page_content for doc in results
-            )
-
-            rag_vraag = HumanMessage(
-                content=f"""
-Gebruik de onderstaande documentcontext om de vraag te beantwoorden.
-
-Als het antwoord niet in de context staat, zeg dan eerlijk dat je
-het niet in het geüploade document kunt vinden.
-
-CONTEXT:
-{context}
-
-VRAAG:
-{vraag}
-"""
-            )
-
-            berichten_voor_model = (
-                st.session_state.gesprek[:-1]
-                + [rag_vraag]
+                st.session_state.vectorstore,
             )
 
         else:
-            # Geen PDF aanwezig: gewone chatbot
             results = []
             berichten_voor_model = st.session_state.gesprek
 
@@ -168,12 +138,13 @@ VRAAG:
             volledig_antwoord = ""
             placeholder = st.empty()
 
-            for stukje in chatbot.stream(berichten_voor_model):
-                if stukje.content:
-                    volledig_antwoord += stukje.content
-                    placeholder.markdown(
-                        volledig_antwoord + "▌"
-                    )
+            for stukje in stream_answer(
+                chatbot,
+                berichten_voor_model,):
+
+                volledig_antwoord += stukje 
+                placeholder.markdown(
+                    volledig_antwoord + "▌")
 
             placeholder.markdown(volledig_antwoord)
 
