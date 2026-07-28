@@ -1,7 +1,10 @@
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 import streamlit as st
-from dotenv import load_dotenv
+
 from langchain_core.messages import AIMessage, HumanMessage
 
 from assistant.chatbot import create_chatbot, create_new_conversation
@@ -13,7 +16,6 @@ from assistant.rag import build_rag_messages
 # Configuratie
 # =========================
 
-load_dotenv()
 
 
 if not os.getenv("OPENAI_API_KEY"):
