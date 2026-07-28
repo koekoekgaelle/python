@@ -1,15 +1,30 @@
+from langchain_core.documents import Document
 from pypdf import PdfReader
 
 
-def load_pdf(file):
+def load_pdf(file) -> list[Document]:
+    """
+    Lees een PDF pagina voor pagina.
+
+    Elke pagina wordt teruggegeven als een LangChain Document
+    met de tekst en bijbehorende metadata.
+    """
+
     reader = PdfReader(file)
+    documents = []
 
-    text = ""
-
-    for page in reader.pages:
+    for page_number, page in enumerate(reader.pages, start=1):
         page_text = page.extract_text()
 
         if page_text:
-            text += page_text + "\n"
+            document = Document(
+                page_content=page_text,
+                metadata={
+                    "source": file.name,
+                    "page": page_number,
+                },
+            )
 
-    return text
+            documents.append(document)
+
+    return documents

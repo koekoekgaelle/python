@@ -5,9 +5,9 @@ from dotenv import load_dotenv
 from langchain_core.messages import AIMessage, HumanMessage
 
 from assistant.chatbot import create_chatbot, create_new_conversation
+from assistant.chat_service import stream_answer
 from assistant.document_service import process_pdf
 from assistant.rag import build_rag_messages
-from assistant.chat_service import stream_answer
 
 # =========================
 # Configuratie
@@ -43,6 +43,13 @@ with st.sidebar:
         "📄 Upload een PDF",
         type=["pdf"],
     )
+
+    gebruik_pdf = st.checkbox(
+         "Gebruik de PDF voor mijn vragen",
+           value=True,
+           disabled=uploaded_file is None,
+    )
+
 
     st.divider()
 
@@ -119,7 +126,7 @@ if vraag:
         # Bepalen welke berichten GPT krijgt
         # =========================
 
-        if "vectorstore" in st.session_state:
+        if ("vectorstore" in st.session_state and gebruik_pdf):
             berichten_voor_model, results = build_rag_messages(
                 st.session_state.gesprek,
                 vraag,
@@ -140,16 +147,40 @@ if vraag:
 
             for stukje in stream_answer(
                 chatbot,
-                berichten_voor_model,):
+                berichten_voor_model,
+            ):
+                volledig_antwoord += stukje
 
-                volledig_antwoord += stukje 
                 placeholder.markdown(
-                    volledig_antwoord + "▌")
+                    volledig_antwoord + "▌"
+                )
 
             placeholder.markdown(volledig_antwoord)
 
             # Alleen tonen wanneer retrieval is gebruikt
             if results:
+                st.markdown("### 📚 Bronnen")
+
+                gebruikte_bronnen = set()
+
+                for doc in results:
+                    source = doc.metadata.get(
+                        "source",
+                        "Onbekende bron",
+                    )
+                    page = doc.metadata.get(
+                        "page",
+                        "Onbekend",
+                    )
+
+                    bron = (source, page)
+
+                    if bron not in gebruikte_bronnen:
+                        st.caption(
+                            f"📄 {source} — pagina {page}"
+                        )
+                        gebruikte_bronnen.add(bron)
+
                 with st.expander(
                     "🔍 Bekijk gebruikte PDF-fragmenten"
                 ):

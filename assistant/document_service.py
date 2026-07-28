@@ -8,8 +8,8 @@ def process_pdf(uploaded_file):
     Verwerk een geüploade PDF en maak een vectorstore.
     """
 
-    text = load_pdf(uploaded_file)
-    chunks = create_chunks(text)
+    documents = load_pdf(uploaded_file)
+    chunks = create_chunks(documents)
     vectorstore = create_vectorstore(chunks)
 
     return {
