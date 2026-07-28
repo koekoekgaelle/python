@@ -15,6 +15,7 @@ from assistant.rag import build_rag_messages
 
 load_dotenv()
 
+
 if not os.getenv("OPENAI_API_KEY"):
     st.error("OPENAI_API_KEY ontbreekt in het .env-bestand.")
     st.stop()
