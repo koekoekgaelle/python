@@ -80,8 +80,7 @@ def reset_session_when_game_changes(game_id: int) -> None:
 
 def render_sidebar(selected_game: dict) -> None:
     with st.sidebar:
-        st.header("Spelsessie")
-
+        st.header("🎲 Spelsessie")
         st.write(f"**Spel:** {selected_game['name']}")
 
         if st.session_state.current_session_id is None:
@@ -101,11 +100,11 @@ def render_sidebar(selected_game: dict) -> None:
             return
 
         st.success(
-            f"Actieve sessie: {st.session_state.current_session_id}"
+            f"Spel is bezig"
         )
 
         if st.button(
-            "Nieuwe sessie",
+            "Nieuwe sessie starten",
             use_container_width=True,
         ):
             try:
@@ -115,7 +114,7 @@ def render_sidebar(selected_game: dict) -> None:
                 st.error(f"Nieuwe sessie starten mislukt: {exc}")
 
         st.divider()
-        st.subheader("Spelers")
+        st.subheader("🏆 Scorebord")
 
         try:
             players = get_session_players(
@@ -127,15 +126,32 @@ def render_sidebar(selected_game: dict) -> None:
 
         if not players:
             st.caption(
-                "Nog geen spelers. Typ bijvoorbeeld: "
-                "'Voeg Anna en Simon toe aan het spel.'"
+                "Nog geen spelers toegevoegd. Typ bijvoorbeeld: "
+                "'Voeg Anna en Simon toe.'"
             )
-        else:
-            for player in players:
-                st.write(
-                    f"**{player['name']}** — "
-                    f"{player['current_score']} punten"
-                )
+            return
+
+        sorted_players = sorted(
+            players,
+            key=lambda player: player.get("current_score", 0),
+            reverse=True,
+        )
+
+        medals = ["🥇", "🥈", "🥉"]
+
+        for index, player in enumerate(sorted_players):
+            name = player["name"]
+            score = player.get("current_score", 0)
+
+            prefix = medals[index] if index < len(medals) else f"{index + 1}."
+
+            left_column, right_column = st.columns([3, 1])
+
+            with left_column:
+                st.write(f"{prefix} **{name}**")
+
+            with right_column:
+                st.write(f"**{score}**")
 
 
 def render_chat_history() -> None:
@@ -231,7 +247,7 @@ def main() -> None:
     render_chat_history()
 
     question = st.chat_input(
-        "Bijvoorbeeld: voeg Anna en Simon toe aan het spel"
+         "Stel een regelvraag of geef een score door..."
     )
 
     if question:
