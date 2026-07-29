@@ -2,13 +2,17 @@ import streamlit as st
 
 from assistant.aiassistant.question_answering import answer_question
 from assistant.database.supabase_client import supabase
+from assistant.pages.game_library import show_game_library
 
 
 st.set_page_config(
     page_title="AI Board Game Assistant",
     page_icon="🎲",
-    layout="centered",
+    layout="wide",
 )
+
+if "page" not in st.session_state:
+    st.session_state.page = "session"
 
 
 def initialize_session_state() -> None:
@@ -79,6 +83,15 @@ def reset_session_when_game_changes(game_id: int) -> None:
 
 
 def render_sidebar(selected_game: dict) -> None:
+    with st.sidebar:
+        if st.button("🎲 Alle games / game toevoegen", use_container_width=True):
+            st.session_state.page = "library"
+            st.rerun()
+
+    if st.session_state.page == "library":
+        show_game_library()
+        st.stop()
+
     with st.sidebar:
         st.header("🎲 Spelsessie")
         st.write(f"**Spel:** {selected_game['name']}")
