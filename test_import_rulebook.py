@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from assistant.embedding.document_loader import load_pdf
-from assistant.embedding.chunker import create_chunks
+from assistant.embedding.document_service import process_pdf
+from assistant.repositories.game_repository import get_game_by_bgg_id
 
 
 class LocalUploadedFile:
@@ -15,29 +15,32 @@ class LocalUploadedFile:
 
 
 def main():
-    print("1. Test gestart")
+    print("1. Catan ophalen uit Supabase")
+
+    game = get_game_by_bgg_id(13)
+
+    if not game:
+        raise RuntimeError("Catan staat niet in de games-tabel.")
+
+    print("2. Game gevonden:", game["name"])
 
     uploaded_file = LocalUploadedFile(
         "documents/catan_handleiding.pdf"
     )
 
-    print("2. PDF gevonden:", uploaded_file.name)
+    print("3. Handleiding verwerken")
 
-    documents = load_pdf(uploaded_file)
-    print("3. Aantal pagina's:", len(documents))
+    result = process_pdf(
+        uploaded_file=uploaded_file,
+        game_id=game["id"],
+        language="nl",
+        document_type="rulebook",
+    )
 
-    chunks = create_chunks(documents)
-    print("4. Aantal chunks:", len(chunks))
-
-    if chunks:
-        first_chunk = chunks[0]
-
-        print("5. Eerste chunknummer:", first_chunk.metadata.get("chunk"))
-        print("6. Paginanummer:", first_chunk.metadata.get("page"))
-        print("7. Lengte eerste chunk:", len(first_chunk.page_content))
-
-        print("\nEerste chunk:")
-        print(first_chunk.page_content[:500])
+    print("4. Import geslaagd")
+    print("Rulebook ID:", result["rulebook_id"])
+    print("Bestand:", result["document_name"])
+    print("Aantal opgeslagen chunks:", result["chunk_count"])
 
 
 if __name__ == "__main__":

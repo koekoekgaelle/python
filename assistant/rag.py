@@ -1,6 +1,6 @@
 from langchain_core.messages import HumanMessage
 
-from assistant.embedding.retriever import search_documents
+from assistant.aiassistant.retriever import search_documents
 
 
 def build_rag_messages(

@@ -1,5 +1,6 @@
 from assistant.embedding.chunker import create_chunks
 from assistant.embedding.document_loader import load_pdf
+from assistant.embedding.ocr_service import load_pdf_with_ocr
 from assistant.embedding.embeddings import create_embeddings
 from assistant.repositories.chunk_repository import create_document_chunks
 from assistant.repositories.rulebook_repository import (
@@ -34,9 +35,24 @@ def process_pdf(
     try:
         documents = load_pdf(uploaded_file)
 
-        if not documents:
-            raise ValueError(
-                "De PDF bevat geen pagina's die konden worden uitgelezen."
+        if any(doc.page_content.strip() for doc in documents):
+            print("✅ Native PDF extractie gebruikt")
+        else: 
+            print("⚠️ Geen tekst gevonden in PDF, OCR wordt gebruikt")
+            documents = load_pdf_with_ocr(
+                uploaded_file,
+                language=language,
+            )
+
+        has_text = any(
+            doc.page_content.strip()
+            for doc in documents
+        )
+
+        if not has_text:
+            documents = load_pdf_with_ocr(
+                uploaded_file,
+                language=language,
             )
 
         chunks = create_chunks(documents)
