@@ -10,6 +10,8 @@ def answer_question(
 ) -> dict[str, Any]:
     cleaned_question = question.strip()
 
+    thread_id = f"game-session-{session_id}"
+
     if not cleaned_question:
         raise ValueError("De vraag mag niet leeg zijn.")
 
@@ -31,7 +33,18 @@ def answer_question(
                     ),
                 }
             ]
-        }
+        }, 
+        config={
+            "configurable": {
+                "thread_id": thread_id
+        },
+        "metadata":{
+            "thread_id": thread_id,
+            "game_id": game_id,
+            "game_session_id": session_id
+        },
+        "run_name": "board_game_agent_run",
+        },
     )
 
     messages = result.get("messages", [])
@@ -48,4 +61,5 @@ def answer_question(
     return {
         "answer": answer,
         "messages": messages,
+        "thread_id": thread_id,
     }

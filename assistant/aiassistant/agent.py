@@ -1,5 +1,7 @@
 from langchain.agents import create_agent
 from langchain_openai import ChatOpenAI
+from langgraph.checkpoint.memory import InMemorySaver
+
 
 from assistant.aiassistant.prompts import SYSTEM_PROMPT
 from assistant.tools.player_tool import add_players
@@ -12,6 +14,8 @@ model = ChatOpenAI(
     temperature=0,
 )
 
+checkpointer = InMemorySaver()
+
 board_game_agent = create_agent(
     model=model,
     tools=[
@@ -20,4 +24,5 @@ board_game_agent = create_agent(
         add_players,
     ],
     system_prompt=SYSTEM_PROMPT,
+    checkpointer=checkpointer,
 )
