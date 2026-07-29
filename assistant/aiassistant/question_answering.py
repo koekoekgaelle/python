@@ -1,6 +1,21 @@
+from langchain.agents import create_agent
 from langchain_openai import ChatOpenAI
 
 from assistant.aiassistant.retriever import retrieve_relevant_chunks
+from assistant.tools.score_tool import update_score
+from assistant.prompts import SYSTEM_PROMPT
+
+
+model = ChatOpenAI(
+    model="gpt-4.1-mini",
+    temperature=0,
+)
+
+agent = create_agent(
+    model=model,
+    tools=[update_score],
+    system_prompt=SYSTEM_PROMPT,
+)
 
 
 def answer_question(
@@ -41,31 +56,26 @@ def answer_question(
 
     context = "\n\n".join(context_parts)
 
-    prompt = f"""
-Je bent een assistent voor bordspelregels.
-
-Beantwoord de vraag uitsluitend met de informatie uit de bronnen hieronder.
-
-Regels:
-- Verzin geen informatie.
-- Geef duidelijk aan wanneer de bronnen onvoldoende informatie bevatten.
-- Antwoord in het Nederlands.
-- Houd het antwoord begrijpelijk en beknopt.
-- Vermeld achter relevante beweringen de bron, bijvoorbeeld [Bron 1, pagina 2].
-
+    user_message = f"""
 Vraag:
 {cleaned_question}
 
-Bronnen:
+Bronnen uit de handleiding:
 {context}
 """
 
-    model = ChatOpenAI(
-        model="gpt-4.1-mini",
-        temperature=0,
+    result = agent.invoke(
+        {
+            "messages": [
+                {
+                    "role": "user",
+                    "content": user_message,
+                }
+            ]
+        }
     )
 
-    response = model.invoke(prompt)
+    final_message = result["messages"][-1]
 
     sources = [
         {
@@ -78,6 +88,6 @@ Bronnen:
     ]
 
     return {
-        "answer": response.content,
+        "answer": final_message.content,
         "sources": sources,
     }

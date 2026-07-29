@@ -1,40 +1,17 @@
 import os
 
 from dotenv import load_dotenv
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
-from langchain_openai import ChatOpenAI
+from langchain_core.messages import HumanMessage
 
+from assistant.aiassistant.chatbot import create_chatbot
 
 load_dotenv()
 
 if not os.getenv("OPENAI_API_KEY"):
     raise ValueError("OPENAI_API_KEY ontbreekt in het .env-bestand.")
 
-
-chatbot = ChatOpenAI(
-    model="gpt-5.6",
-)
-
-gesprek = [
-    SystemMessage(
-        content=(
-            "Je bent een AI Board Game Assistant. "
-                    "Je helpt gebruikers met vragen over bordspellen op basis van de geüploade spelhandleiding."
-                    "Gebruik uitsluitend de informatie uit de opgehaalde context als bron voor spelregels."
-                    "Als de context onvoldoende informatie bevat, geef dat eerlijk aan. Verzin geen spelregels."
-                    "Geef duidelijke en praktische antwoorden alsof je de spelregels aan een speler uitlegt."
-                    "Wanneer relevant:"
-                    "- leg een regel stap voor stap uit;"
-                    "- geef voorbeelden;"
-                    "- verwijs naar de pagina('s) uit de handleiding als deze beschikbaar zijn."
-            
-                    "Beantwoord vragen in dezelfde taal als de gebruiker."
-                    "Blijf altijd binnen het onderwerp van het geselecteerde bordspel."
-            
-                    "Als de gebruiker een vraag stelt die niets met het geselecteerde bordspel te maken heeft, leg dan vriendelijk uit dat je alleen kunt helpen met vragen over de regels van dit spel."
-                )
-    )
-]
+agent = create_chatbot()
+gesprek = []
 
 print("AI-assistent gestart. Typ 'stop' om af te sluiten.\n")
 
@@ -51,14 +28,17 @@ while True:
     gesprek.append(HumanMessage(content=vraag))
 
     try:
-        antwoord = chatbot.invoke(gesprek)
+        resultaat = agent.invoke(
+            {
+                "messages": gesprek,
+            }
+        )
 
-        print(f"\nAssistent: {antwoord.content}\n")
+        gesprek = resultaat["messages"]
+        laatste_bericht = gesprek[-1]
 
-        gesprek.append(AIMessage(content=antwoord.content))
+        print(f"\nAssistent: {laatste_bericht.content}\n")
 
     except Exception as fout:
         print(f"\nEr ging iets mis: {fout}\n")
-
-        # Verwijder de laatste vraag wanneer de API-aanroep mislukt.
         gesprek.pop()
