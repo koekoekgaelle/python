@@ -1,7 +1,7 @@
-from assistant.embedding.chunker import create_chunks
-from assistant.embedding.document_loader import load_pdf
-from assistant.embedding.ocr_service import load_pdf_with_ocr
-from assistant.embedding.embeddings import create_embeddings
+from assistant.embedding_and_db.chunker import create_chunks
+from assistant.embedding_and_db.document_loader import load_pdf
+from assistant.embedding_and_db.ocr_service import load_pdf_with_ocr
+from assistant.embedding_and_db.embeddings import create_embeddings
 from assistant.repositories.chunk_repository import create_document_chunks
 from assistant.repositories.rulebook_repository import (
     create_rulebook,

@@ -1,4 +1,4 @@
-from assistant.database.supabase_client import get_supabase_client
+from assistant.embedding_and_db.supabase_client import get_supabase_client
 
 
 def get_rulebooks_by_game_id(game_id: int):

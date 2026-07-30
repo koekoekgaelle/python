@@ -1,6 +1,6 @@
 from typing import Any
 
-from assistant.database.supabase_client import get_supabase_client
+from assistant.embedding_and_db.supabase_client import get_supabase_client
 
 
 def match_document_chunks(

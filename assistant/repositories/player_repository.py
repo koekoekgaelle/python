@@ -1,4 +1,4 @@
-from assistant.database.supabase_client import supabase
+from assistant.embedding_and_db.supabase_client import supabase
 
 
 def create_player(

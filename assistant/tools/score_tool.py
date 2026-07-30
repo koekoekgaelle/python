@@ -1,6 +1,6 @@
 from langchain_core.tools import tool
 
-from assistant.database.supabase_client import supabase
+from assistant.embedding_and_db.supabase_client import supabase
 
 
 @tool

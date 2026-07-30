@@ -1,7 +1,7 @@
 from typing import Any
 
-from assistant.embedding.embeddings import create_embeddings
-from assistant.repositories.document_chunk_repository import (
+from assistant.embedding_and_db.embeddings import create_embeddings
+from assistant.repositories.match_chunk_repository import (
     match_document_chunks,
 )
 

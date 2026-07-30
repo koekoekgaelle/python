@@ -1,7 +1,7 @@
 import streamlit as st
 
 from assistant.aiassistant.question_answering import answer_question
-from assistant.database.supabase_client import supabase
+from assistant.embedding_and_db.supabase_client import supabase
 from assistant.pages.game_library import show_game_library
 
 

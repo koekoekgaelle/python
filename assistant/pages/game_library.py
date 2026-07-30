@@ -2,7 +2,7 @@ import re
 
 import streamlit as st
 
-from assistant.embedding.document_service import process_pdf
+from assistant.embedding_and_db.document_service import process_pdf
 from assistant.repositories.game_repository import (
     create_game,
     get_all_games,

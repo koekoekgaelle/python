@@ -1,7 +1,10 @@
 from langchain_core.tracers.langchain import LangChainTracer
 
+from assistant.aiassistant.agent import board_game_agent
 
-def stream_answer(chatbot, messages):
+
+
+def stream_answer(board_game_agent, messages):
     """
     Stream een antwoord van het taalmodel.
 
@@ -12,7 +15,7 @@ def stream_answer(chatbot, messages):
         project_name="Mijn-Ai-Assistant",
     )
 
-    for chunk in chatbot.stream(
+    for chunk in board_game_agent.stream(
         messages,
         config={
             "callbacks": [tracer],

@@ -2,7 +2,7 @@ from collections.abc import Sequence
 
 from langchain_core.documents import Document
 
-from assistant.database.supabase_client import get_supabase_client
+from assistant.embedding_and_db.supabase_client import get_supabase_client
 
 
 def create_document_chunks(
