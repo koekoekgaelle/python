@@ -82,6 +82,17 @@ def reset_session_when_game_changes(game_id: int) -> None:
         st.session_state.messages = []
 
 
+# TODO (RensBlitz): render_sidebar() doet nu te veel: navigatie, sessie
+# aanmaken, spelers ophalen, foutafhandeling en het scorebord tekenen zitten
+# allemaal in 1 functie. Splits dit op in kleinere functies (bv. losse
+# render_new_session_button(), render_scoreboard()) zodat het makkelijker te
+# lezen en te testen is. Kijk ook naar de "except Exception as exc" blokken
+# hieronder (en in handle_question/main): we tonen nu de ruwe foutmelding
+# direct aan de gebruiker (f"... mislukt: {exc}"). Dit is belangrijk om aan te
+# passen, want dat kan interne details lekken naar de eindgebruiker en maakt
+# het lastig om specifieke fouten (bv. netwerkfout vs. validatiefout) anders
+# af te handelen. Vang specifieke exceptions af en toon een nette, generieke
+# melding aan de gebruiker.
 def render_sidebar(selected_game: dict) -> None:
     with st.sidebar:
         if st.button("🎲 Alle games / game toevoegen", use_container_width=True):

@@ -30,4 +30,15 @@ def get_supabase_client() -> Client:
     return create_client(supabase_url, supabase_key)
 
 
+# TODO (RensBlitz): we hebben nu 2 manieren om aan de Supabase-client te komen:
+# deze losse "supabase" singleton en de functie get_supabase_client() zelf.
+# In de repositories wordt het door elkaar gebruikt (player_repository.py en
+# score_tool.py pakken "supabase" direct, terwijl game_repository.py,
+# rulebook_repository.py en chunk_repository.py steeds get_supabase_client()
+# aanroepen). Kies 1 manier en gebruik die overal, dat maakt het consistenter
+# en makkelijker om later te mocken in tests. Daarnaast staat in bijna elke
+# repository dezelfde .table(...).select/insert/eq(...).execute() code - dat
+# zou je kunnen samenvoegen in een klein herbruikbaar hulpfunctie/baseclass,
+# dat scheelt een hoop duplicate code. Dit is belangrijk voor de onderhoudbaarheid
+# op de lange termijn, al is het geen acute bug.
 supabase = get_supabase_client()
