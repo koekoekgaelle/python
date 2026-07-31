@@ -2,9 +2,10 @@ import sqlite3
 import streamlit as st
 import requests
 
-from assistant.aiassistant.question_answering import answer_question
+from assistant.aiassistant.qa_service import answer_question
 from assistant.embedding_and_db.supabase_client import get_supabase_client
 from assistant.pages.game_library import show_game_library
+from assistant.utils.exceptions import ResultAnswerQuestionError, NoAnswerError, SessionCreationError, InvalidDataError, ServerConnectionError, PlayerLoadError, GameLoadError
 from typing import Any
 from langchain_core.tracers.langchain import LangChainTracer
 
@@ -17,7 +18,7 @@ def get_board_game_agent():
 
 board_game_agent = get_board_game_agent()
 #cachen bij stramlit zodat er niet bij elke rerun een nieuwe openai-client en agent worden aangemaakt.
-@st.cache_respource
+@st.cache_resource
 def get_tracer():
     return LangChainTracer(project_name="Mijn-Ai-Assistant")
 
@@ -70,7 +71,7 @@ def create_game_session(game_id: int) -> dict:
     )
 
     if not response.data:
-        raise RuntimeError("De spelsessie kon niet worden aangemaakt.")
+        raise SessionCreationError()
 
     return response.data[0]
 
@@ -180,10 +181,14 @@ def render_new_session_button(
     try:
         start_new_session(game_id)
         st.rerun()
-    except requests.RequestException:
-        st.error("Kan geen verbinding maken met de server. Controleer je internetverbinding.")
-    except ValueError:
+    except ServerConnectionError:
+        st.error(
+        "Kan geen verbinding maken met de server. "
+        "Controleer je internetverbinding."
+        )
+    except InvalidDataError:
         st.error("Ongeldige gegevens ontvangen.")
+
 
 def render_scoreboard(session_id: int) -> None:
     """Haal spelers op en render het scorebord."""
@@ -215,8 +220,8 @@ def load_session_players(
 ) -> list[dict[str, Any]] | None:
     """Haal spelers op en handel fouten op één centrale plek af."""
     try:
-        players = get_session_players(session_id)
-    except sqlite3.Error:
+        return get_session_players(session_id)
+    except PlayerLoadError:
         st.error(
             "Er ging iets mis bij het ophalen van de spelers. "
             "Probeer het later opnieuw."
@@ -281,7 +286,7 @@ def handle_question(
     try:
         with st.chat_message("assistant"):
             with st.spinner("Even nadenken..."):
-                result = answer_question(
+                answer = answer_question(
                     agent=board_game_agent,
                     question=question,
                     game_id=selected_game["id"],
@@ -289,7 +294,9 @@ def handle_question(
                     callbacks=[langchain_tracer],
                 )
 
-            answer = result["answer"]
+            if answer is None:
+                raise ResultAnswerQuestionError()
+
             st.markdown(answer)
 
         st.session_state.messages.append(
@@ -299,8 +306,8 @@ def handle_question(
             }
         )
 
-    except Exception:
-        error_message = ("Er is iets misgegaan")
+    except Exception as error:
+        error_message = f"{type(error).__name__}: {error}"
 
         with st.chat_message("assistant"):
             st.error(error_message)
@@ -312,7 +319,6 @@ def handle_question(
             }
         )
 
-
 def main() -> None:
     initialize_session_state()
 
@@ -323,7 +329,7 @@ def main() -> None:
 
     try:
         games = get_games()
-    except Exception:
+    except GameLoadError:
         st.error( "Spellen ophalen mislukt. Controleer je internetverbinding of probeer het later opnieuw.")
         st.stop()
 

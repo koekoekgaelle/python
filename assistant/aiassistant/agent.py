@@ -32,5 +32,5 @@ def create_board_game_agent(
             search_rulebook,
             update_score,
         ],
-        system_message=SYSTEM_PROMPT,
+        system_prompt=SYSTEM_PROMPT,
         checkpointer=checkpointer,)

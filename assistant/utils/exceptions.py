@@ -14,6 +14,9 @@ class PlayerAddError(PlayerError):
 class ScoreUpdateError(PlayerError):
     """De score kon niet worden bijgewerkt."""
 
+class PlayerLoadError(PlayerError):
+    """Spelers konden niet worden opgehaald."""
+
 #Fouten rondom chunks
 class DocumentError(Exception):
     """Basisklasse voor fouten rond documenten."""
@@ -50,6 +53,12 @@ class GameError(Exception):
 class GameCreationError(GameError):
     """Het spel kon niet worden toegevoegd."""
 
+class SessionCreationError(GameError):
+    """De spelsessie kon niet worden aangemaakt."""
+
+class GameLoadError(GameError):
+    """Spellen konden niet worden opgehaald."""
+
 #Fouten rondom Supabase
 class SupabaseError(Exception):
     """Basisklasse voor fouten rondom supabase."""
@@ -68,3 +77,25 @@ class QuestionError(Exception):
 
 class EmptyQuestionError(QuestionError):
     """De vraag mag niet leeg zijn."""
+
+
+#Fouten rondom antwoorden
+class AnswerError(Exception):
+    """Basisklasse voor fouten rond antwoorden."""
+
+class ResultAnswerQuestionError(AnswerError):
+    """answer_question gaf geen resultaat terug."""
+
+class NoAnswerError(AnswerError):
+    """De assistent gaf geen antwoord terug."""
+
+
+#Algemene fouten
+class GeneralError(Exception):
+    """Basis klasse voor algemene fouten."""
+
+class InvalidDataError(GeneralError):
+    """Ongeldige gegevens ontvangen."""
+
+class ServerConnectionError(GeneralError):
+    """Kan geen verbinding maken met de server. Controleer internet verbinding."""
