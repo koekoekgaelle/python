@@ -1,4 +1,3 @@
-from io import BytesIO
 
 import pytesseract
 from langchain_core.documents import Document

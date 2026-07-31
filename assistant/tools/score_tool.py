@@ -1,18 +1,10 @@
 from langchain_core.tools import tool
 
-from assistant.embedding_and_db.supabase_client import supabase
+from assistant.embedding_and_db.supabase_client import get_supabase_client
 
-
-# TODO (RensBlitz): door het hele project heen gebruiken we generieke
-# ValueError/RuntimeError voor domeinfouten (hier "speler niet gevonden",
-# maar ook bv. "rulebook kon niet worden toegevoegd" elders). Daardoor kan een
-# aanroeper niet onderscheiden wat er precies mis ging zonder de foutmelding
-# te gaan parsen. Dit is belangrijk om te verbeteren: maak eigen exception-
-# classes (bv. PlayerNotFoundError, InvalidScoreError) zodat callers hier
-# gericht op kunnen reageren, en zodat we in app.py nettere, specifiekere
-# foutmeldingen aan de gebruiker kunnen tonen.
 @tool
 def update_score(
+    
     session_id: int,
     player_name: str,
     points: int,
@@ -27,6 +19,7 @@ def update_score(
     Deze tool maakt nooit een nieuwe speler aan.
     """
 
+    supabase = get_supabase_client()
     cleaned_name = player_name.strip()
 
     if not cleaned_name:

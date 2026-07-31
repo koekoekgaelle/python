@@ -1,8 +1,16 @@
 from collections.abc import Sequence
+from typing import Any
 
 from langchain_core.documents import Document
 
 from assistant.embedding_and_db.supabase_client import get_supabase_client
+from assistant.repositories.repository_helpers import (
+    delete_rows,
+    select_rows,
+)
+
+
+TABLE_NAME = "document_chunks"
 
 
 def create_document_chunks(
@@ -18,41 +26,41 @@ def create_document_chunks(
     De chunks en embeddings moeten dezelfde volgorde en lengte hebben.
     De records worden in batches opgeslagen om te grote requests te voorkomen.
     """
-
     if len(chunks) != len(embeddings):
         raise ValueError(
             "Het aantal chunks komt niet overeen met het aantal embeddings."
         )
 
+    if batch_size < 1:
+        raise ValueError("batch_size moet minimaal 1 zijn.")
+
     if not chunks:
         return 0
 
-    supabase = get_supabase_client()
     records = []
 
     for chunk, embedding in zip(chunks, embeddings):
-        page_number = chunk.metadata.get("page")
-        chunk_number = chunk.metadata.get("chunk")
+        records.append(
+            {
+                "rulebook_id": rulebook_id,
+                "game_id": game_id,
+                "content": chunk.page_content,
+                "page_number": chunk.metadata.get("page"),
+                "chunk_number": chunk.metadata.get("chunk"),
+                "metadata": chunk.metadata,
+                "embedding": embedding,
+            }
+        )
 
-        record = {
-            "rulebook_id": rulebook_id,
-            "game_id": game_id,
-            "content": chunk.page_content,
-            "page_number": page_number,
-            "chunk_number": chunk_number,
-            "metadata": chunk.metadata,
-            "embedding": embedding,
-        }
-
-        records.append(record)
-
+    supabase = get_supabase_client()
     inserted_count = 0
 
     for start in range(0, len(records), batch_size):
         batch = records[start:start + batch_size]
 
         response = (
-            supabase.table("document_chunks")
+            supabase
+            .table(TABLE_NAME)
             .insert(batch)
             .execute()
         )
@@ -69,34 +77,30 @@ def create_document_chunks(
     return inserted_count
 
 
-def get_chunks_by_rulebook_id(rulebook_id: int):
-    """
-    Haal alle chunks van één handleiding op.
-    """
-    supabase = get_supabase_client()
-
-    response = (
-        supabase.table("document_chunks")
-        .select(
+def get_chunks_by_rulebook_id(
+    rulebook_id: int,
+) -> list[dict[str, Any]]:
+    """Haal alle chunks van één handleiding op."""
+    return select_rows(
+        table_name=TABLE_NAME,
+        columns=(
             "id, rulebook_id, game_id, content, "
             "page_number, chunk_number, metadata"
-        )
-        .eq("rulebook_id", rulebook_id)
-        .order("chunk_number")
-        .execute()
+        ),
+        filters={
+            "rulebook_id": rulebook_id,
+        },
+        order_by="chunk_number",
     )
-
-    return response.data or []
 
 
 def count_chunks_by_rulebook_id(rulebook_id: int) -> int:
-    """
-    Tel hoeveel chunks voor een handleiding zijn opgeslagen.
-    """
+    """Tel hoeveel chunks voor een handleiding zijn opgeslagen."""
     supabase = get_supabase_client()
 
     response = (
-        supabase.table("document_chunks")
+        supabase
+        .table(TABLE_NAME)
         .select("id", count="exact")
         .eq("rulebook_id", rulebook_id)
         .execute()
@@ -106,16 +110,12 @@ def count_chunks_by_rulebook_id(rulebook_id: int) -> int:
 
 
 def delete_chunks_by_rulebook_id(rulebook_id: int) -> bool:
-    """
-    Verwijder alle chunks van één handleiding.
-    """
-    supabase = get_supabase_client()
-
-    (
-        supabase.table("document_chunks")
-        .delete()
-        .eq("rulebook_id", rulebook_id)
-        .execute()
+    """Verwijder alle chunks van één handleiding."""
+    deleted_chunks = delete_rows(
+        table_name=TABLE_NAME,
+        filters={
+            "rulebook_id": rulebook_id,
+        },
     )
 
-    return True
+    return bool(deleted_chunks)

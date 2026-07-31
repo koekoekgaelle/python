@@ -1,14 +1,27 @@
-from dbm import sqlite3
-
+import sqlite3
 import streamlit as st
+import requests
 
 from assistant.aiassistant.question_answering import answer_question
 from assistant.embedding_and_db.supabase_client import supabase
 from assistant.pages.game_library import show_game_library
 from typing import Any
+from langchain_core.tracers.langchain import LangChainTracer
 
-import requests
 
+from assistant.aiassistant.agent import create_board_game_agent
+
+@st.cache_resource
+def get_board_game_agent():
+    return create_board_game_agent()
+
+board_game_agent = get_board_game_agent()
+#cachen bij stramlit zodat er niet bij elke rerun een nieuwe openai-client en agent worden aangemaakt.
+@st.cache_respource
+def get_tracer():
+    return LangChainTracer(project_name="Mijn-Ai-Assistant")
+
+langchain_tracer = get_tracer()
 
 st.set_page_config(
     page_title="AI Board Game Assistant",
@@ -86,6 +99,8 @@ def reset_session_when_game_changes(game_id: int) -> None:
         st.session_state.current_game_id = game_id
         st.session_state.messages = []
 
+
+MEDALS = ("🥇", "🥈", "🥉")
 
 def render_sidebar(selected_game: dict) -> None:
     with st.sidebar:
@@ -265,9 +280,11 @@ def handle_question(
         with st.chat_message("assistant"):
             with st.spinner("Even nadenken..."):
                 result = answer_question(
+                    agent=board_game_agent,
                     question=question,
                     game_id=selected_game["id"],
                     session_id=st.session_state.current_session_id,
+                    callbacks=[langchain_tracer],
                 )
 
             answer = result["answer"]

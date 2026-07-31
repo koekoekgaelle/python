@@ -1,38 +1,50 @@
-from assistant.embedding_and_db.supabase_client import get_supabase_client
+from typing import Any
+
+from supabase import Client
+
+from assistant.repositories.repository_helpers import (
+    delete_rows,
+    insert_row,
+    select_rows,
+)
 
 
-def get_rulebooks_by_game_id(game_id: int):
+TABLE_NAME = "rulebooks"
+
+
+def get_rulebooks_by_game_id(
+    game_id: int,
+    client: Client | None = None,
+) -> list[dict[str, Any]]:
     """
     Haal alle handleidingen op die bij één bordspel horen.
     """
-    supabase = get_supabase_client()
-
-    response = (
-        supabase.table("rulebooks")
-        .select("*")
-        .eq("game_id", game_id)
-        .order("uploaded_at", desc=True)
-        .execute()
+    return select_rows(
+        table_name=TABLE_NAME,
+        filters={
+            "game_id": game_id,
+        },
+        order_by="uploaded_at",
+        descending=True,
+        client=client,
     )
 
-    return response.data or []
 
-
-def get_rulebook_by_id(rulebook_id: int):
+def get_rulebook_by_id(
+    rulebook_id: int,
+    client: Client | None = None,
+) -> dict[str, Any] | None:
     """
     Zoek één handleiding op basis van de interne Supabase-id.
     """
-    supabase = get_supabase_client()
-
-    response = (
-        supabase.table("rulebooks")
-        .select("*")
-        .eq("id", rulebook_id)
-        .limit(1)
-        .execute()
+    rulebooks = select_rows(
+        table_name=TABLE_NAME,
+        filters={
+            "id": rulebook_id,
+        },
+        limit=1,
+        client=client,
     )
-
-    rulebooks = response.data or []
 
     if not rulebooks:
         return None
@@ -40,21 +52,24 @@ def get_rulebook_by_id(rulebook_id: int):
     return rulebooks[0]
 
 
-def rulebook_exists(game_id: int) -> bool:
+def rulebook_exists(
+    game_id: int,
+    client: Client | None = None,
+) -> bool:
     """
     Controleer of er minimaal één handleiding voor een spel bestaat.
     """
-    supabase = get_supabase_client()
-
-    response = (
-        supabase.table("rulebooks")
-        .select("id")
-        .eq("game_id", game_id)
-        .limit(1)
-        .execute()
+    rulebooks = select_rows(
+        table_name=TABLE_NAME,
+        columns="id",
+        filters={
+            "game_id": game_id,
+        },
+        limit=1,
+        client=client,
     )
 
-    return bool(response.data)
+    return bool(rulebooks)
 
 
 def create_rulebook(
@@ -62,12 +77,11 @@ def create_rulebook(
     filename: str,
     language: str = "nl",
     document_type: str = "rulebook",
-):
+    client: Client | None = None,
+) -> dict[str, Any]:
     """
     Voeg een nieuwe handleiding toe aan Supabase.
     """
-    supabase = get_supabase_client()
-
     rulebook_data = {
         "game_id": game_id,
         "filename": filename,
@@ -75,41 +89,36 @@ def create_rulebook(
         "document_type": document_type,
     }
 
-    response = (
-        supabase.table("rulebooks")
-        .insert(rulebook_data)
-        .execute()
+    created_rulebook = insert_row(
+        table_name=TABLE_NAME,
+        data=rulebook_data,
+        client=client,
     )
 
-    created_rulebooks = response.data or []
-
-    if not created_rulebooks:
+    if created_rulebook is None:
         raise RuntimeError(
             f"De handleiding '{filename}' kon niet worden toegevoegd."
         )
 
-    return created_rulebooks[0]
+    return created_rulebook
 
 
-def delete_rulebook(rulebook_id: int):
+def delete_rulebook(
+    rulebook_id: int,
+    client: Client | None = None,
+) -> bool:
     """
     Verwijder een handleiding.
 
-    Door de foreign key met ON DELETE CASCADE worden later ook de
+    Door de foreign key met ON DELETE CASCADE worden ook de
     bijbehorende document-chunks verwijderd.
     """
-    supabase = get_supabase_client()
-
-    response = (
-        supabase.table("rulebooks")
-        .delete()
-        .eq("id", rulebook_id)
-        .execute()
+    deleted_rulebooks = delete_rows(
+        table_name=TABLE_NAME,
+        filters={
+            "id": rulebook_id,
+        },
+        client=client,
     )
 
-    deleted_rulebooks = response.data or []
-
-    if not deleted_rulebooks:
-        return False
-
-    return True
+    return bool(deleted_rulebooks)
