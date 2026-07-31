@@ -30,6 +30,15 @@ def process_pdf(
     Door ON DELETE CASCADE worden gekoppelde chunks ook verwijderd.
     """
 
+    # TODO (RensBlitz): process_pdf() doet nu te veel in 1 functie (PDF inlezen,
+    # OCR-fallback bepalen, chunken, metadata toevoegen, embeddings maken, en
+    # opslaan/rollback in de database) - dit is lastig te testen en te lezen.
+    # Splits dit op in kleinere stappen, bv. een aparte extract_text_from_pdf()
+    # die de OCR-fallback regelt, en een aparte persist_rulebook_chunks().
+    # Daarnaast wordt hieronder 2x dezelfde check gedaan (heeft "documents"
+    # tekst of niet), waardoor OCR in het slechtste geval 2x wordt aangeroepen
+    # voor hetzelfde bestand. Dit is belangrijk om recht te trekken, want dat
+    # kost onnodig extra tijd (en OCR is al traag) en maakt de flow verwarrend.
     rulebook = None
 
     try:
@@ -37,7 +46,7 @@ def process_pdf(
 
         if any(doc.page_content.strip() for doc in documents):
             print("✅ Native PDF extractie gebruikt")
-        else: 
+        else:
             print("⚠️ Geen tekst gevonden in PDF, OCR wordt gebruikt")
             documents = load_pdf_with_ocr(
                 uploaded_file,

@@ -87,13 +87,11 @@ def reset_session_when_game_changes(game_id: int) -> None:
         st.session_state.messages = []
 
 
-
-MEDALS = ("🥇", "🥈", "🥉")
-
-
-def render_sidebar(selected_game: dict[str, Any]) -> None:
-    """Render de navigatie en inhoud van de zijbalk."""
-    render_library_button()
+def render_sidebar(selected_game: dict) -> None:
+    with st.sidebar:
+        if st.button("🎲 Alle games / game toevoegen", use_container_width=True):
+            st.session_state.page = "library"
+            st.rerun()
 
     if st.session_state.page == "library":
         show_game_library()

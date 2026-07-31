@@ -1,3 +1,11 @@
+# TODO (RensBlitz): deze import klopt niet, "search_documents" bestaat niet in
+# retriever.py (daar heet de functie "retrieve_relevant_chunks"), dus dit
+# bestand crasht zodra het geimporteerd wordt. Daarnaast lijkt build_rag_messages
+# hier niet meer gebruikt te worden, omdat de agent nu via de search_rulebook
+# tool werkt in plaats van via deze losse RAG-flow. Dit is belangrijk om op te
+# lossen: of dit bestand bijwerken en echt gebruiken, of helemaal verwijderen,
+# want twee losse implementaties voor hetzelfde (ophalen van context) zorgt
+# voor verwarring en onderhoudswerk.
 from langchain_core.messages import HumanMessage
 
 from assistant.aiassistant.retriever import search_documents
