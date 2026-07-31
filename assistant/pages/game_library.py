@@ -82,4 +82,4 @@ def show_game_library():
                     st.success(f"{game['name']} is toegevoegd.")
                     st.rerun()
                 except Exception as error:
-                    st.error(f"Fout bij het toevoegen van het spel: {error}")
+                    st.error("Er is iets misgegaan bij het toevoegen van het spel. Probeer het later opnieuw.")

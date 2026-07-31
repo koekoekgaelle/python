@@ -1,8 +1,13 @@
+from dbm import sqlite3
+
 import streamlit as st
 
 from assistant.aiassistant.question_answering import answer_question
 from assistant.embedding_and_db.supabase_client import supabase
 from assistant.pages.game_library import show_game_library
+from typing import Any
+
+import requests
 
 
 st.set_page_config(
@@ -82,89 +87,160 @@ def reset_session_when_game_changes(game_id: int) -> None:
         st.session_state.messages = []
 
 
-def render_sidebar(selected_game: dict) -> None:
-    with st.sidebar:
-        if st.button("🎲 Alle games / game toevoegen", use_container_width=True):
-            st.session_state.page = "library"
-            st.rerun()
+
+MEDALS = ("🥇", "🥈", "🥉")
+
+
+def render_sidebar(selected_game: dict[str, Any]) -> None:
+    """Render de navigatie en inhoud van de zijbalk."""
+    render_library_button()
 
     if st.session_state.page == "library":
         show_game_library()
         st.stop()
 
     with st.sidebar:
-        st.header("🎲 Spelsessie")
-        st.write(f"**Spel:** {selected_game['name']}")
+        render_session_header(selected_game)
 
         if st.session_state.current_session_id is None:
-            st.info("Er is nog geen actieve spelsessie.")
-
-            if st.button(
-                "Nieuwe spelsessie starten",
-                type="primary",
-                use_container_width=True,
-            ):
-                try:
-                    start_new_session(selected_game["id"])
-                    st.rerun()
-                except Exception as exc:
-                    st.error(f"Spelsessie starten mislukt: {exc}")
-
+            render_inactive_session(selected_game["id"])
             return
 
-        st.success(
-            f"Spel is bezig"
-        )
+        render_active_session(selected_game["id"])
+        render_scoreboard(st.session_state.current_session_id)
 
+
+def render_library_button() -> None:
+    """Render de knop waarmee de gebruiker teruggaat naar de gamebibliotheek."""
+    with st.sidebar:
         if st.button(
-            "Nieuwe sessie starten",
+            "🎲 Alle games / game toevoegen",
             use_container_width=True,
         ):
-            try:
-                start_new_session(selected_game["id"])
-                st.rerun()
-            except Exception as exc:
-                st.error(f"Nieuwe sessie starten mislukt: {exc}")
+            st.session_state.page = "library"
+            st.rerun()
 
-        st.divider()
-        st.subheader("🏆 Scorebord")
 
-        try:
-            players = get_session_players(
-                st.session_state.current_session_id
-            )
-        except Exception as exc:
-            st.error(f"Spelers ophalen mislukt: {exc}")
-            players = []
+def render_session_header(selected_game: dict[str, Any]) -> None:
+    """Render algemene informatie over de geselecteerde game."""
+    st.header("🎲 Spelsessie")
+    st.write(f"**Spel:** {selected_game['name']}")
 
-        if not players:
-            st.caption(
-                "Nog geen spelers toegevoegd. Typ bijvoorbeeld: "
-                "'Voeg Anna en Simon toe.'"
-            )
-            return
 
-        sorted_players = sorted(
-            players,
-            key=lambda player: player.get("current_score", 0),
-            reverse=True,
+def render_inactive_session(game_id: int) -> None:
+    """Render de UI wanneer er nog geen actieve sessie is."""
+    st.info("Er is nog geen actieve spelsessie.")
+
+    render_new_session_button(
+        game_id=game_id,
+        label="Nieuwe spelsessie starten",
+        primary=True,
+    )
+
+
+def render_active_session(game_id: int) -> None:
+    """Render de bediening voor een actieve sessie."""
+    st.success("Spel is bezig")
+
+    render_new_session_button(
+        game_id=game_id,
+        label="Nieuwe sessie starten",
+    )
+
+
+def render_new_session_button(
+    game_id: int,
+    label: str,
+    *,
+    primary: bool = False,
+) -> None:
+    """Render een knop waarmee een nieuwe spelsessie wordt gestart."""
+    if not st.button(
+        label,
+        type="primary" if primary else "secondary",
+        use_container_width=True,
+    ):
+        return
+
+    try:
+        start_new_session(game_id)
+        st.rerun()
+    except requests.RequestException:
+        st.error("Kan geen verbinding maken met de server. Controleer je internetverbinding.")
+    except ValueError:
+        st.error("Ongeldige gegevens ontvangen.")
+
+def render_scoreboard(session_id: int) -> None:
+    """Haal spelers op en render het scorebord."""
+    st.divider()
+    st.subheader("🏆 Scorebord")
+
+    players = load_session_players(session_id)
+
+    if players is None:
+        # Er is al een foutmelding getoond.
+        return
+
+    if not players:
+        render_empty_scoreboard()
+        return
+
+    sorted_players = sorted(
+        players,
+        key=lambda player: player.get("current_score", 0),
+        reverse=True,
+    )
+
+    for position, player in enumerate(sorted_players, start=1):
+        render_scoreboard_row(player, position)
+
+
+def load_session_players(
+    session_id: int,
+) -> list[dict[str, Any]] | None:
+    """Haal spelers op en handel fouten op één centrale plek af."""
+    try:
+        players = get_session_players(session_id)
+    except sqlite3.Error:
+        st.error(
+            "Er ging iets mis bij het ophalen van de spelers. "
+            "Probeer het later opnieuw."
         )
+        
 
-        medals = ["🥇", "🥈", "🥉"]
 
-        for index, player in enumerate(sorted_players):
-            name = player["name"]
-            score = player.get("current_score", 0)
+def render_empty_scoreboard() -> None:
+    """Render de melding voor een scorebord zonder spelers."""
+    st.caption(
+        "Nog geen spelers toegevoegd. Typ bijvoorbeeld: "
+        "'Voeg Anna en Simon toe.'"
+    )
 
-            prefix = medals[index] if index < len(medals) else f"{index + 1}."
 
-            left_column, right_column = st.columns([3, 1])
+def render_scoreboard_row(
+    player: dict[str, Any],
+    position: int,
+) -> None:
+    """Render één speler op het scorebord."""
+    name = player.get("name", "Onbekende speler")
+    score = player.get("current_score", 0)
+    prefix = get_position_prefix(position)
 
-            with left_column:
-                st.write(f"{prefix} **{name}**")
+    left_column, right_column = st.columns([3, 1])
 
-            with right_column:
-                st.write(f"**{score}**")
+    with left_column:
+        st.write(f"{prefix} **{name}**")
+
+    with right_column:
+        st.write(f"**{score}**")
+
+
+def get_position_prefix(position: int) -> str:
+    """Geef een medaille of positienummer terug."""
+    if position <= len(MEDALS):
+        return MEDALS[position - 1]
+
+    return f"{position}."
 
 
 def render_chat_history() -> None:
@@ -206,8 +282,8 @@ def handle_question(
             }
         )
 
-    except Exception as exc:
-        error_message = f"Er ging iets mis: {exc}"
+    except Exception:
+        error_message = ("Er is iets misgegaan")
 
         with st.chat_message("assistant"):
             st.error(error_message)
@@ -230,8 +306,8 @@ def main() -> None:
 
     try:
         games = get_games()
-    except Exception as exc:
-        st.error(f"Spellen ophalen uit Supabase mislukt: {exc}")
+    except Exception:
+        st.error( "Spellen ophalen mislukt. Controleer je internetverbinding of probeer het later opnieuw.")
         st.stop()
 
     if not games:
