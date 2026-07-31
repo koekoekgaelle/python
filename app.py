@@ -3,7 +3,7 @@ import streamlit as st
 import requests
 
 from assistant.aiassistant.question_answering import answer_question
-from assistant.embedding_and_db.supabase_client import supabase
+from assistant.embedding_and_db.supabase_client import get_supabase_client
 from assistant.pages.game_library import show_game_library
 from typing import Any
 from langchain_core.tracers.langchain import LangChainTracer
@@ -37,7 +37,9 @@ def initialize_session_state() -> None:
     defaults = {
         "current_session_id": None,
         "current_game_id": None,
+        "current_game_name": None,
         "messages": [],
+        "page": "library",
     }
 
     for key, value in defaults.items():
@@ -47,7 +49,7 @@ def initialize_session_state() -> None:
 
 def get_games() -> list[dict]:
     response = (
-        supabase.table("games")
+        get_supabase_client().table("games")
         .select("id, name")
         .order("name")
         .execute()
@@ -58,7 +60,7 @@ def get_games() -> list[dict]:
 
 def create_game_session(game_id: int) -> dict:
     response = (
-        supabase.table("game_sessions")
+        get_supabase_client().table("game_sessions")
         .insert(
             {
                 "game_id": game_id,
@@ -75,7 +77,7 @@ def create_game_session(game_id: int) -> dict:
 
 def get_session_players(session_id: int) -> list[dict]:
     response = (
-        supabase.table("session_players")
+        get_supabase_client().table("session_players")
         .select("id, name, current_score")
         .eq("session_id", session_id)
         .order("id")

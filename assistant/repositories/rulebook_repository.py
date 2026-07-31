@@ -2,6 +2,7 @@ from typing import Any
 
 from supabase import Client
 
+from assistant.utils.exceptions import RulebookCreationError
 from assistant.repositories.repository_helpers import (
     delete_rows,
     insert_row,
@@ -96,9 +97,7 @@ def create_rulebook(
     )
 
     if created_rulebook is None:
-        raise RuntimeError(
-            f"De handleiding '{filename}' kon niet worden toegevoegd."
-        )
+        raise RulebookCreationError()
 
     return created_rulebook
 

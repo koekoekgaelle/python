@@ -3,7 +3,7 @@ from typing import Any
 from supabase import Client
 
 from assistant.repositories.repository_helpers import insert_row
-
+from assistant.utils.exceptions import PlayerAddError
 
 def create_player(
     session_id: int,
@@ -21,8 +21,6 @@ def create_player(
     )
 
     if player is None:
-        raise RuntimeError(
-            "De speler kon niet worden toegevoegd."
-        )
+        raise PlayerAddError()
 
     return player

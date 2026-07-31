@@ -1,7 +1,7 @@
 from langchain_core.tools import tool
 
 from assistant.repositories.player_repository import create_player
-
+from assistant.utils.exceptions import InvalidPlayerNameError
 
 @tool
 def add_players(
@@ -32,6 +32,6 @@ def add_players(
         )
 
     if not players:
-        raise ValueError("Er is geen geldige spelersnaam opgegeven.")
+        raise InvalidPlayerNameError()
 
     return players

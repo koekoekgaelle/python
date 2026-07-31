@@ -1,6 +1,7 @@
 from typing import Any
 
 from assistant.embedding_and_db.embeddings import create_embeddings
+from assistant.utils.exceptions import EmptyQuestionError
 from assistant.repositories.match_chunk_repository import (
     match_document_chunks,
 )
@@ -21,7 +22,7 @@ def retrieve_relevant_chunks(
     cleaned_question = question.strip()
 
     if not cleaned_question:
-        raise ValueError("De vraag mag niet leeg zijn.")
+        raise EmptyQuestionError()
 
     embedding_model = create_embeddings()
 

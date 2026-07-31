@@ -4,6 +4,7 @@ from assistant.embedding_and_db.chunker import create_chunks
 from assistant.embedding_and_db.document_loader import load_pdf
 from assistant.embedding_and_db.ocr_service import load_pdf_with_ocr
 from assistant.embedding_and_db.embeddings import create_embeddings
+from assistant.utils.exceptions import InvalidContentError, ChunkCreationError
 from assistant.repositories.chunk_repository import create_document_chunks
 from assistant.repositories.rulebook_repository import (
     create_rulebook,
@@ -86,9 +87,7 @@ def extract_text_from_pdf(
     )
 
     if not documents_have_text(documents):
-        raise ValueError(
-            "Er kon geen tekst uit de PDF worden gehaald."
-        )
+        raise InvalidContentError()
 
     return documents 
 
@@ -101,9 +100,7 @@ def create_rulebook_chunks(documents: list) -> list:
     chunks= create_chunks(documents)
 
     if not chunks:
-        raise ValueError(
-            "Er konden geen chunks van de PDF worden gemaakt."
-        )
+        raise ChunkCreationError( )
     return chunks
 
 

@@ -1,6 +1,7 @@
 from langchain_core.tools import tool
 
 from assistant.embedding_and_db.supabase_client import get_supabase_client
+from assistant.utils.exceptions import (InvalidPlayerNameError, PlayerNotFoundError, ScoreUpdateError)
 
 @tool
 def update_score(
@@ -19,14 +20,14 @@ def update_score(
     Deze tool maakt nooit een nieuwe speler aan.
     """
 
-    supabase = get_supabase_client()
+    
     cleaned_name = player_name.strip()
 
     if not cleaned_name:
-        raise ValueError("De spelersnaam mag niet leeg zijn.")
+        raise InvalidPlayerNameError()
 
     player_response = (
-        supabase
+        get_supabase_client()
         .table("session_players")
         .select("id, session_id, name, current_score")
         .eq("session_id", session_id)
@@ -36,10 +37,7 @@ def update_score(
     )
 
     if not player_response.data:
-        raise ValueError(
-            f"Speler '{cleaned_name}' is niet gevonden "
-            f"in sessie {session_id}."
-        )
+        raise PlayerNotFoundError()
 
     player = player_response.data[0]
 
@@ -47,7 +45,7 @@ def update_score(
     new_score = previous_score + int(points)
 
     update_response = (
-        supabase
+        get_supabase_client()
         .table("session_players")
         .update({"current_score": new_score})
         .eq("id", player["id"])
@@ -56,9 +54,7 @@ def update_score(
     )
 
     if not update_response.data:
-        raise RuntimeError(
-            f"De score van '{cleaned_name}' kon niet worden bijgewerkt."
-        )
+        raise ScoreUpdateError()
 
     updated_player = update_response.data[0]
 

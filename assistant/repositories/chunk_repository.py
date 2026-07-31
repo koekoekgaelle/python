@@ -9,6 +9,7 @@ from assistant.repositories.repository_helpers import (
     select_rows,
 )
 
+from assistant.utils.exceptions import (LengthChunkError, InvalidBatchSizeError)
 
 TABLE_NAME = "document_chunks"
 
@@ -27,12 +28,10 @@ def create_document_chunks(
     De records worden in batches opgeslagen om te grote requests te voorkomen.
     """
     if len(chunks) != len(embeddings):
-        raise ValueError(
-            "Het aantal chunks komt niet overeen met het aantal embeddings."
-        )
+        raise LengthChunkError()
 
     if batch_size < 1:
-        raise ValueError("batch_size moet minimaal 1 zijn.")
+        raise InvalidBatchSizeError()
 
     if not chunks:
         return 0
@@ -52,14 +51,14 @@ def create_document_chunks(
             }
         )
 
-    supabase = get_supabase_client()
+    
     inserted_count = 0
 
     for start in range(0, len(records), batch_size):
         batch = records[start:start + batch_size]
 
         response = (
-            supabase
+            get_supabase_client()
             .table(TABLE_NAME)
             .insert(batch)
             .execute()
@@ -68,9 +67,7 @@ def create_document_chunks(
         inserted_records = response.data or []
 
         if len(inserted_records) != len(batch):
-            raise RuntimeError(
-                "Niet alle documentchunks konden worden opgeslagen."
-            )
+            raise LengthChunkError()
 
         inserted_count += len(inserted_records)
 
@@ -96,10 +93,10 @@ def get_chunks_by_rulebook_id(
 
 def count_chunks_by_rulebook_id(rulebook_id: int) -> int:
     """Tel hoeveel chunks voor een handleiding zijn opgeslagen."""
-    supabase = get_supabase_client()
+   
 
     response = (
-        supabase
+        get_supabase_client()
         .table(TABLE_NAME)
         .select("id", count="exact")
         .eq("rulebook_id", rulebook_id)
@@ -110,12 +107,9 @@ def count_chunks_by_rulebook_id(rulebook_id: int) -> int:
 
 
 def delete_chunks_by_rulebook_id(rulebook_id: int) -> bool:
-    """Verwijder alle chunks van één handleiding."""
-    deleted_chunks = delete_rows(
+    delete_rows(
         table_name=TABLE_NAME,
-        filters={
-            "rulebook_id": rulebook_id,
-        },
+        filters={"rulebook_id": rulebook_id},
     )
 
-    return bool(deleted_chunks)
+    return True

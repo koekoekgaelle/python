@@ -1,7 +1,7 @@
 from typing import Any
 
 from assistant.embedding_and_db.supabase_client import get_supabase_client
-
+from assistant.utils.exceptions import InvalidQueryEmbeddingError, InvalidMatchCountError
 
 def match_document_chunks(
     query_embedding: list[float],
@@ -26,14 +26,14 @@ def match_document_chunks(
     """
 
     if not query_embedding:
-        raise ValueError("query_embedding mag niet leeg zijn.")
+        raise InvalidQueryEmbeddingError()
 
     if match_count < 1:
-        raise ValueError("match_count moet minimaal 1 zijn.")
+        raise InvalidMatchCountError()
 
-    supabase = get_supabase_client()
+   
 
-    response = supabase.rpc(
+    response = get_supabase_client().rpc(
         "match_document_chunks",
         {
             "query_embedding": query_embedding,
